@@ -152,6 +152,9 @@ choice BOARD_TYPE
     config BOARD_TYPE_XMINI_C3
         bool "Xmini C3"
         depends on IDF_TARGET_ESP32C3
+    config BOARD_TYPE_ESP32C3_SUPER_MINI
+        bool "ESP32-C3 Super Mini"
+        depends on IDF_TARGET_ESP32C3
     config BOARD_TYPE_ESP_KORVO2_V3
         bool "Espressif Korvo2 V3"
         depends on IDF_TARGET_ESP32S3
