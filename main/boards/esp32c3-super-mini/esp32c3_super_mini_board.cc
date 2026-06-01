@@ -16,9 +16,9 @@
 #include <esp_lcd_panel_vendor.h>
 #include <esp_log.h>
 
-#define TAG "XminiC3Board"
+#define TAG "Esp32c3SuperMiniBoard"
 
-class XminiC3Board : public WifiBoard {
+class Esp32c3SuperMiniBoard : public WifiBoard {
 private:
     i2c_master_bus_handle_t codec_i2c_bus_;
     esp_lcd_panel_io_handle_t panel_io_ = nullptr;
@@ -144,7 +144,7 @@ private:
     }
 
 public:
-    XminiC3Board() : boot_button_(BOOT_BUTTON_GPIO) {
+    Esp32c3SuperMiniBoard() : boot_button_(BOOT_BUTTON_GPIO) {
         InitializeCodecI2c();
         InitializeSsd1306Display();
         InitializeButtons();
@@ -175,4 +175,4 @@ public:
     }
 };
 
-DECLARE_BOARD(XminiC3Board);
+DECLARE_BOARD(Esp32c3SuperMiniBoard);
