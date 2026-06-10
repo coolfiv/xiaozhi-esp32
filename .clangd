@@ -1,0 +1,7 @@
+CompileFlags:
+  CompilationDatabase: build/
+  Remove:
+    - -m*
+    - -fstrict-volatile*
+    - -fno-tree-switch*
+    - -fno-allow-store-data-races
