@@ -10,7 +10,8 @@
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_ldo_regulator.h"
 
-#include "esp_lcd_ek79007.h"
+// #include "esp_lcd_ek79007.h"
+#include "display/esp_lcd_fl7707.h"
 
 #include <esp_log.h>
 #include <driver/i2c_master.h>
@@ -78,7 +79,7 @@ private:
 
         ESP_LOGI(TAG, "Install MIPI DSI LCD control panel");
         // we use DBI interface to send LCD commands and parameters
-        esp_lcd_dbi_io_config_t dbi_config = EK79007_PANEL_IO_DBI_CONFIG();
+        esp_lcd_dbi_io_config_t dbi_config = FL7707_PANEL_IO_DBI_CONFIG();
         esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &io);
 
         esp_lcd_dpi_panel_config_t dpi_config = {
@@ -100,7 +101,7 @@ private:
                 .use_dma2d = true,
             },
         };
-        ek79007_vendor_config_t vendor_config = {
+        fl7707_vendor_config_t vendor_config = {
             .mipi_config = {
                 .dsi_bus = mipi_dsi_bus,
                 .dpi_config = &dpi_config,
@@ -116,7 +117,7 @@ private:
             },
             .vendor_config = &vendor_config,
         };
-        esp_lcd_new_panel_ek79007(io, &lcd_dev_config, &disp_panel);
+        esp_lcd_new_panel_fl7707(io, &lcd_dev_config, &disp_panel);
         esp_lcd_panel_reset(disp_panel);
         esp_lcd_panel_init(disp_panel);
 
@@ -153,10 +154,10 @@ private:
         };
         esp_lcd_panel_io_handle_t tp_io_handle = NULL;
         esp_lcd_panel_io_i2c_config_t tp_io_config = {
-            .dev_addr = ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS, 
+            .dev_addr = ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS,
             .control_phase_bytes = 1,
             .dc_bit_offset = 0,
-            .lcd_cmd_bits = 16,                            
+            .lcd_cmd_bits = 16,
             .flags =
             {
                 .disable_control_phase = 1,
