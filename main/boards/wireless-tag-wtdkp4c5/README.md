@@ -20,7 +20,7 @@
 
 * Select the board
 
-        Xiaozhi Assistant -> Board Type -> Wireless-Tag WTP4C5MP07S
+        Xiaozhi Assistant -> Board Type -> Wireless-Tag WTDKP4C5
 
 * Select PSRAM
 
