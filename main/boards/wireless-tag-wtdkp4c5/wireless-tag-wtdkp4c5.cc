@@ -24,9 +24,9 @@
 #include <driver/sdspi_host.h>
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
 
-#define TAG "WirelessTagEsp32p47b"
+#define TAG "WirelessTagEsp32p4c5"
 
-class WirelessTagEsp32p47b : public WifiBoard {
+class WirelessTagEsp32p4c5 : public WifiBoard {
 private:
     i2c_master_bus_handle_t i2c_bus_;
     Button boot_button_;
@@ -267,7 +267,7 @@ private:
     }
 
 public:
-    WirelessTagEsp32p47b() :
+    WirelessTagEsp32p4c5() :
         boot_button_(BOOT_BUTTON_GPIO) {
         InitializeCodecI2c();
         InitializeLCD();
@@ -304,4 +304,4 @@ public:
 
 };
 
-DECLARE_BOARD(WirelessTagEsp32p47b);
+DECLARE_BOARD(WirelessTagEsp32p4c5);
