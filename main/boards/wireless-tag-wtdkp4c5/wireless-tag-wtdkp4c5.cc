@@ -24,15 +24,174 @@
 #include <driver/sdspi_host.h>
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
 
+#include <string>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
+#include "esp_h264_dec.h"  // Espressif H264 解码器头文件
+#include "esp_h264_dec_sw.h"
+#include "esp_heap_caps.h" // 用于分配 PSRAM 内存
+
+// 如果使用 ESP32-P4 的硬件 PPA 转换 YUV 到 RGB，需要引入此头文件
+#if CONFIG_IDF_TARGET_ESP32P4
+#include "driver/ppa.h"
+#endif
+
 #define TAG "WirelessTagEsp32p4c5"
 
 class MyMipiLcdDisplay : public MipiLcdDisplay {
+private:
+    TaskHandle_t m_video_task = nullptr;
+    volatile bool m_stop_requested = false;
+    std::string m_current_video_path;
+
+    // 播放任务入口（C 风格静态函数）
+    static void VideoPlayTaskEntry(void* param) {
+        auto* instance = static_cast<MyMipiLcdDisplay*>(param);
+        instance->PlayVideoLoop();
+        instance->m_video_task = nullptr;
+        vTaskDelete(NULL);
+    }
+
+    // 实际的解码与播放循环
+    void PlayVideoLoop() {
+        FILE* f = fopen(m_current_video_path.c_str(), "rb");
+        if (!f) {
+            ESP_LOGE("MipiVideo", "Failed to open video file: %s", m_current_video_path.c_str());
+            return;
+        }
+
+        // 1. 初始化 esp_h264 解码器
+        esp_h264_dec_cfg_t dec_cfg = {
+            // 根据 esp_h264 库的实际版本配置参数
+            // 通常可以设置为默认配置
+        };
+        esp_h264_dec_handle_t dec_handle = nullptr;
+
+        // 3. 【核心修复】根据芯片直接调用对应的创建函数
+        esp_err_t ret = esp_h264_dec_sw_new(&dec_cfg, &dec_handle);
+
+
+        if (ret != ESP_OK) {
+            ESP_LOGE("MipiVideo", "Failed to create H264 decoder");
+            fclose(f);
+            return;
+        }
+
+        // 2. 申请缓冲区
+        // 解码器输入流缓冲区
+        const size_t in_buf_size = 4096 * 4;
+        uint8_t* in_buf = (uint8_t*)heap_caps_malloc(in_buf_size, MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM);
+
+        // 假设视频分辨率（实际可以从解码器获取，这里以 800x480 为例）
+        int width = 800;
+        int height = 480;
+
+        // RGB565 屏幕缓冲区，每个像素 2 字节
+        size_t rgb_buf_size = width * height * 2;
+        uint8_t* rgb_buf = (uint8_t*)heap_caps_malloc(rgb_buf_size, MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM);
+
+        if (!in_buf || !rgb_buf) {
+            ESP_LOGE("MipiVideo", "Failed to allocate video buffers in PSRAM");
+            free(in_buf);
+            free(rgb_buf);
+            esp_h264_dec_del(dec_handle);
+            fclose(f);
+            return;
+        }
+
+        ESP_LOGI("MipiVideo", "Start decoding pipeline...");
+
+        while (!m_stop_requested) {
+            // 从文件读取 H.264 原始码流（Annex B 格式）
+            size_t read_bytes = fread(in_buf, 1, in_buf_size, f);
+            if (read_bytes <= 0) {
+                // 视频播放结束，这里演示循环播放（Seek 到文件头）
+                fseek(f, 0, SEEK_SET);
+                continue;
+            }
+
+            // 填充输入输出帧结构体
+            esp_h264_dec_in_frame_t in_frame = {
+                .raw_data = {
+                    .buffer = in_buf,              // 填充到子结构体的 buffer 指针
+                    .len  = (uint32_t)read_bytes,  // 填充到子结构体的 len 长度
+                },
+                .consume = 0,
+                .dts = 0,
+                .pts = 0
+            };
+            esp_h264_dec_out_frame_t out_frame = {};
+
+            // 4. 【核心修复】直接使用通用的解码函数
+            ret = esp_h264_dec_process(dec_handle, &in_frame, &out_frame);
+
+            if (ret == ESP_OK && out_frame.out_size > 0 && out_frame.outbuf != nullptr) {
+                // 3. 将解码出的 YUV420p 数据转换为 RGB565/RGB888
+                // 注意：这里需要调用 YUV 转 RGB 的算法。如果是 P4 芯片，强烈推荐使用硬件 PPA：
+                // ppa_convert_yuv_to_rgb(out_data.buffer, rgb_buf, width, height);
+
+                // 4. 将 RGB 数据刷写到屏幕
+                // 这里调用你基类 MipiLcdDisplay 的绘制函数，例如：
+                // this->DrawBitmap(0, 0, width, height, rgb_buf);
+
+                // 5. 控制帧率 (例如 30fps = 33ms)
+                // 实际项目中推荐配合硬件 VSYNC 中断或高精度定时器来控制帧率
+                vTaskDelay(pdMS_TO_TICKS(33));
+            } else if (ret != ESP_OK) {
+                ESP_LOGW("MipiVideo", "Decoder processed with error code: %d", ret);
+            }
+        }
+
+        // 6. 释放资源
+        free(in_buf);
+        free(rgb_buf);
+        esp_h264_dec_del(dec_handle);
+        fclose(f);
+        ESP_LOGI("MipiVideo", "Video playback stopped & resources freed.");
+    }
+
 public:
-    using MipiLcdDisplay::MipiLcdDisplay;  // 继承构造函数
+    using MipiLcdDisplay::MipiLcdDisplay;
+
+    // 析构时确保安全释放任务
+    ~MyMipiLcdDisplay() {
+        StopVideo();
+    }
+
+    // 停止当前播放的视频
+    void StopVideo() {
+        if (m_video_task != nullptr) {
+            m_stop_requested = true;
+            ESP_LOGI("MipiVideo", "Waiting for video task to exit...");
+            // 等待后台任务自己跑完循环并销毁
+            while (m_video_task != nullptr) {
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+        }
+    }
 
     void SetVideo(const char* video) override {
-        ESP_LOGI("MipiVideo", "Play video: %s", video);
-        // 这里放实际的播放逻辑
+        ESP_LOGI("MipiVideo", "Play video requested: %s", video);
+
+        // 1. 先安全停止正在播放的视频
+        StopVideo();
+
+        // 2. 更新视频路径和控制信号
+        m_current_video_path = video;
+        m_stop_requested = false;
+
+        // 3. 创建异步 FreeRTOS 任务进行后台解码，防止阻塞主 UI 线程
+        // H.264 解码比较吃栈空间，建议分配 8KB 以上，并绑定到 Core 1 运行
+        xTaskCreatePinnedToCore(
+            VideoPlayTaskEntry,
+            "video_play_task",
+            1024 * 8,
+            this,
+            5, // 优先级需要根据你的 UI 线程进行微调
+            &m_video_task,
+            1  // 绑定到核心 1
+        );
     }
 };
 
