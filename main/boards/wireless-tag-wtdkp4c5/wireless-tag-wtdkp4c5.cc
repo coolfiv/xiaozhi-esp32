@@ -26,6 +26,16 @@
 
 #define TAG "WirelessTagEsp32p4c5"
 
+class MyMipiLcdDisplay : public MipiLcdDisplay {
+public:
+    using MipiLcdDisplay::MipiLcdDisplay;  // 继承构造函数
+
+    void SetVideo(const char* video) override {
+        ESP_LOGI("MipiVideo", "Play video: %s", video);
+        // 这里放实际的播放逻辑
+    }
+};
+
 class WirelessTagEsp32p4c5 : public WifiBoard {
 private:
     i2c_master_bus_handle_t i2c_bus_;
@@ -121,7 +131,7 @@ private:
         esp_lcd_panel_reset(disp_panel);
         esp_lcd_panel_init(disp_panel);
 
-        display_ = new MipiLcdDisplay(io, disp_panel, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+        display_ = new MyMipiLcdDisplay(io, disp_panel, DISPLAY_WIDTH, DISPLAY_HEIGHT,
                                        DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
 #if 0
         lv_display_t *disp = lv_display_get_default();
