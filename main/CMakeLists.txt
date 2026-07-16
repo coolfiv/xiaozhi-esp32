@@ -1,5 +1,6 @@
 # Define source files
 set(SOURCES "audio/audio_codec.cc"
+            "audio/audio_debugger.cc"
             "audio/audio_service.cc"
             "audio/demuxer/ogg_demuxer.cc"
             "audio/codecs/no_audio_codec.cc"
@@ -9,7 +10,6 @@ set(SOURCES "audio/audio_codec.cc"
             "audio/codecs/es8388_audio_codec.cc"
             "audio/codecs/es8389_audio_codec.cc"
             "audio/codecs/dummy_audio_codec.cc"
-            "audio/processors/audio_debugger.cc"
             "led/single_led.cc"
             "led/circular_strip.cc"
             "led/gpio_led.cc"
@@ -61,7 +61,7 @@ list(APPEND SOURCES
     "boards/common/sy6970.cc"
     "boards/common/system_reset.cc"
 )
-if(CONFIG_XIAOZHI_USE_ETHERNET)
+if(CONFIG_XIAOZHI_NETWORK_ETHERNET)
     list(APPEND SOURCES "boards/common/ethernet_board.cc")
 endif()
 list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/boards/common)
@@ -380,6 +380,12 @@ elseif(CONFIG_BOARD_TYPE_WAVESHARE_ESP32_S3_TOUCH_LCD_4_3C)
     set(BUILTIN_TEXT_FONT font_puhui_basic_30_4)
     set(BUILTIN_ICON_FONT font_awesome_30_4)
     set(DEFAULT_EMOJI_COLLECTION twemoji_64)
+elseif(CONFIG_BOARD_TYPE_WAVESHARE_ESP32_S3_TOUCH_LCD_7C)
+    set(MANUFACTURER "waveshare")
+    set(BOARD_TYPE "esp32-s3-touch-lcd-7c")
+    set(BUILTIN_TEXT_FONT font_puhui_basic_30_4)
+    set(BUILTIN_ICON_FONT font_awesome_30_4)
+    set(DEFAULT_EMOJI_COLLECTION twemoji_64)
 elseif(CONFIG_BOARD_TYPE_WAVESHARE_ESP32_S3_TOUCH_AMOLED_1_75)
     set(MANUFACTURER "waveshare")
     set(BOARD_TYPE "esp32-s3-touch-amoled-1.75")
@@ -524,7 +530,7 @@ elseif(CONFIG_BOARD_TYPE_WAVESHARE_ESP32_S3_TOUCH_AMOLED_1_32)
     set(BUILTIN_TEXT_FONT font_puhui_basic_20_4)
     set(BUILTIN_ICON_FONT font_awesome_20_4)
     set(DEFAULT_EMOJI_COLLECTION twemoji_32)
-elseif(CONFIG_BOARD_TYPE_WAVESHARE_ESP32_P4_NANO OR CONFIG_ETH_BOARD_TYPE_WAVESHARE_ESP32_P4_NANO)
+elseif(CONFIG_BOARD_TYPE_WAVESHARE_ESP32_P4_NANO)
     set(MANUFACTURER "waveshare")
     set(BOARD_TYPE "esp32-p4-nano")
     set(BUILTIN_TEXT_FONT font_puhui_basic_30_4)
@@ -888,16 +894,13 @@ else()
 endif()
 list(APPEND SOURCES ${BOARD_SOURCES})
 
-# Select audio processor according to Kconfig
-if(CONFIG_USE_AUDIO_PROCESSOR)
-    list(APPEND SOURCES "audio/processors/afe_audio_processor.cc")
-else()
-    list(APPEND SOURCES "audio/processors/no_audio_processor.cc")
-endif()
+# Select one audio engine for each chip family
 if(CONFIG_IDF_TARGET_ESP32S3 OR CONFIG_IDF_TARGET_ESP32P4)
-    list(APPEND SOURCES "audio/wake_words/afe_wake_word.cc")
+    list(APPEND SOURCES "audio/engines/afe_audio_engine.cc")
     list(APPEND SOURCES "audio/wake_words/custom_wake_word.cc")
+    list(APPEND SOURCES "audio/wake_words/wake_word_audio_cache.cc")
 else()
+    list(APPEND SOURCES "audio/engines/lite_audio_engine.cc")
     list(APPEND SOURCES "audio/wake_words/esp_wake_word.cc")
 endif()
 

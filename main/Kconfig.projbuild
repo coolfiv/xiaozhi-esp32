@@ -117,35 +117,8 @@ choice
         bool "Serbian"
 endchoice
 
-choice XIAOZHI_NETWORK_TYPE
-    prompt "Network Type"
-    default XIAOZHI_NETWORK_WIFI
-    help
-        Select the network connection type before choosing the board type.
-        Board Type options are filtered according to this choice.
-
-    config XIAOZHI_NETWORK_WIFI
-        bool "WiFi"
-
-    config XIAOZHI_NETWORK_ETHERNET
-        bool "Ethernet"
-        depends on IDF_TARGET_ESP32P4
-        select ETH_ENABLED
-        select ETH_USE_ESP32_EMAC
-        help
-            Use an onboard Ethernet port for network access.
-            Currently supported board:
-              - Waveshare ESP32-P4-NANO
-endchoice
-
-config XIAOZHI_USE_ETHERNET
-    bool
-    default y if XIAOZHI_NETWORK_ETHERNET
-    default n
-
 choice BOARD_TYPE
     prompt "Board Type"
-    depends on XIAOZHI_NETWORK_WIFI
     default BOARD_TYPE_BREAD_COMPACT_WIFI
     help
         Board type. 开发板类型
@@ -363,6 +336,9 @@ choice BOARD_TYPE
     config BOARD_TYPE_WAVESHARE_ESP32_S3_TOUCH_LCD_4_3C
         bool "Waveshare ESP32-S3-Touch-LCD-4.3C"
         depends on IDF_TARGET_ESP32S3
+    config BOARD_TYPE_WAVESHARE_ESP32_S3_TOUCH_LCD_7C
+        bool "Waveshare ESP32-S3-Touch-LCD-7C"
+        depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_WAVESHARE_ESP32_S3_TOUCH_LCD_1_85C
         bool "Waveshare ESP32-S3-Touch-LCD-1.85C"
         depends on IDF_TARGET_ESP32S3
@@ -569,7 +545,7 @@ choice BOARD_TYPE
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ZHENGCHEN_CAM_ML307
         bool "征辰科技AI Camera(ML307)"
-	depends on IDF_TARGET_ESP32S3
+	    depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_MINSI_K08_DUAL
         bool "敏思科技K08(DUAL)"
         depends on IDF_TARGET_ESP32S3
@@ -620,16 +596,22 @@ choice BOARD_TYPE
         depends on IDF_TARGET_ESP32S3
 endchoice
 
-choice XIAOZHI_ETH_BOARD_TYPE
-    prompt "Board Type"
-    depends on XIAOZHI_NETWORK_ETHERNET
-    default ETH_BOARD_TYPE_WAVESHARE_ESP32_P4_NANO
+choice XIAOZHI_NETWORK_TYPE
+    prompt "Network Type"
+    depends on BOARD_TYPE_WAVESHARE_ESP32_P4_NANO
+    default XIAOZHI_NETWORK_WIFI
     help
-        Board type with onboard Ethernet support.
+        Select the network connection used by this board.
 
-    config ETH_BOARD_TYPE_WAVESHARE_ESP32_P4_NANO
-        bool "Waveshare ESP32-P4-NANO"
-        depends on IDF_TARGET_ESP32P4
+    config XIAOZHI_NETWORK_WIFI
+        bool "WiFi"
+
+    config XIAOZHI_NETWORK_ETHERNET
+        bool "Ethernet"
+        select ETH_ENABLED
+        select ETH_USE_ESP32_EMAC
+        help
+            Use the onboard Ethernet port for network access.
 endchoice
 
 menu "Ethernet Configuration"
@@ -648,7 +630,7 @@ menu "Ethernet Configuration"
     config XIAOZHI_ETH_MDC_GPIO
         int "Ethernet SMI MDC GPIO"
         range 0 54
-        default 31 if ETH_BOARD_TYPE_WAVESHARE_ESP32_P4_NANO
+        default 31 if BOARD_TYPE_WAVESHARE_ESP32_P4_NANO
         default 31
         help
             GPIO used by the Ethernet SMI MDC signal.
@@ -656,7 +638,7 @@ menu "Ethernet Configuration"
     config XIAOZHI_ETH_MDIO_GPIO
         int "Ethernet SMI MDIO GPIO"
         range 0 54
-        default 52 if ETH_BOARD_TYPE_WAVESHARE_ESP32_P4_NANO
+        default 52 if BOARD_TYPE_WAVESHARE_ESP32_P4_NANO
         default 52
         help
             GPIO used by the Ethernet SMI MDIO signal.
@@ -672,7 +654,7 @@ menu "Ethernet Configuration"
     config XIAOZHI_ETH_PHY_RST_GPIO
         int "Ethernet PHY Reset GPIO"
         range -1 54
-        default 51 if ETH_BOARD_TYPE_WAVESHARE_ESP32_P4_NANO
+        default 51 if BOARD_TYPE_WAVESHARE_ESP32_P4_NANO
         default -1
         help
             GPIO used to reset the Ethernet PHY. Set to -1 if not connected.
@@ -921,11 +903,13 @@ config WAKE_WORD_DETECTION_IN_LISTENING
         When disabled (default), wake word detection is turned off during listening.
 
 config USE_AUDIO_PROCESSOR
-    bool "Enable Audio Noise Reduction"
+    bool "Enable AFE Audio Processing"
     default y
     depends on (IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4) && SPIRAM
     help
-        Requires ESP32 S3 and PSRAM
+        Enable the shared AFE uplink path with AEC and VAD. Noise suppression
+        is not enabled because this project does not provide an NSNet model.
+        Requires ESP32-S3 or ESP32-P4 with PSRAM.
 
 config USE_DEVICE_AEC
     bool "Enable Device-Side AEC"
