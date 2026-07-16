@@ -24,13 +24,12 @@
 #include <driver/sdspi_host.h>
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
 
-#include <string>
-#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_h264_dec.h"  // Espressif H264 解码器头文件
 #include "esp_h264_dec_sw.h"
 #include "esp_heap_caps.h" // 用于分配 PSRAM 内存
+#include "assets.h"
 
 // 如果使用 ESP32-P4 的硬件 PPA 转换 YUV 到 RGB，需要引入此头文件
 #if CONFIG_IDF_TARGET_ESP32P4
@@ -43,7 +42,10 @@ class MyMipiLcdDisplay : public MipiLcdDisplay {
 private:
     TaskHandle_t m_video_task = nullptr;
     volatile bool m_stop_requested = false;
-    std::string m_current_video_path;
+
+    // 【修改】不再保存文件路径，而是直接保存 assets 里的视频数据指针和大小
+    const uint8_t* m_video_data_ptr = nullptr;
+    size_t m_video_data_size = 0;
 
     // 播放任务入口（C 风格静态函数）
     static void VideoPlayTaskEntry(void* param) {
@@ -55,9 +57,8 @@ private:
 
     // 实际的解码与播放循环
     void PlayVideoLoop() {
-        FILE* f = fopen(m_current_video_path.c_str(), "rb");
-        if (!f) {
-            ESP_LOGE("MipiVideo", "Failed to open video file: %s", m_current_video_path.c_str());
+        if (!m_video_data_ptr || m_video_data_size == 0) {
+            ESP_LOGE("MipiVideo", "Invalid video data pointer or size.");
             return;
         }
 
@@ -74,7 +75,6 @@ private:
 
         if (ret != ESP_OK) {
             ESP_LOGE("MipiVideo", "Failed to create H264 decoder");
-            fclose(f);
             return;
         }
 
@@ -96,26 +96,34 @@ private:
             free(in_buf);
             free(rgb_buf);
             esp_h264_dec_del(dec_handle);
-            fclose(f);
             return;
         }
 
-        ESP_LOGI("MipiVideo", "Start decoding pipeline...");
+        ESP_LOGI("MipiVideo", "Start decoding pipeline from memory...");
+
+        // 【新增】用来记录当前在内存视频数据中读取的偏移量（模拟文件指针）
+        size_t mem_offset = 0;
 
         while (!m_stop_requested) {
-            // 从文件读取 H.264 原始码流（Annex B 格式）
-            size_t read_bytes = fread(in_buf, 1, in_buf_size, f);
-            if (read_bytes <= 0) {
-                // 视频播放结束，这里演示循环播放（Seek 到文件头）
-                fseek(f, 0, SEEK_SET);
+            // 模拟 fread：从内存数据中“读取”一小段填充到输入缓冲区
+            size_t remaining_bytes = m_video_data_size - mem_offset;
+            size_t bytes_to_read = (remaining_bytes < in_buf_size) ? remaining_bytes : in_buf_size;
+
+            if (bytes_to_read <= 0) {
+                // 模拟 fseek(f, 0, SEEK_SET) 循环播放：把偏移量重置为 0
+                mem_offset = 0;
                 continue;
             }
+
+            // 零拷贝或直接 memcpy 到输入缓冲区进行切片解码
+            memcpy(in_buf, m_video_data_ptr + mem_offset, bytes_to_read);
+            mem_offset += bytes_to_read; // 更新读取进度
 
             // 填充输入输出帧结构体
             esp_h264_dec_in_frame_t in_frame = {
                 .raw_data = {
                     .buffer = in_buf,              // 填充到子结构体的 buffer 指针
-                    .len  = (uint32_t)read_bytes,  // 填充到子结构体的 len 长度
+                    .len  = (uint32_t)bytes_to_read,  // 填充到子结构体的 len 长度
                 },
                 .consume = 0,
                 .dts = 0,
@@ -137,7 +145,7 @@ private:
 
                 // 5. 控制帧率 (例如 30fps = 33ms)
                 // 实际项目中推荐配合硬件 VSYNC 中断或高精度定时器来控制帧率
-                vTaskDelay(pdMS_TO_TICKS(33));
+                vTaskDelay(pdMS_TO_TICKS(33)); // 帧率控制
             } else if (ret != ESP_OK) {
                 ESP_LOGW("MipiVideo", "Decoder processed with error code: %d", ret);
             }
@@ -147,7 +155,6 @@ private:
         free(in_buf);
         free(rgb_buf);
         esp_h264_dec_del(dec_handle);
-        fclose(f);
         ESP_LOGI("MipiVideo", "Video playback stopped & resources freed.");
     }
 
@@ -178,8 +185,16 @@ public:
         StopVideo();
 
         // 2. 更新视频路径和控制信号
-        m_current_video_path = video;
-        m_stop_requested = false;
+        void* temp_ptr = nullptr;
+        size_t temp_size = 0;
+
+        auto& assets = Assets::GetInstance();
+
+        // 调用小智的 C++ 资源获取 API
+        if (!assets.GetAssetData(video, temp_ptr, temp_size)) {
+            ESP_LOGE("MipiVideo", "Failed to find asset: %s in assets.bin", video);
+            return;
+        }
 
         // 3. 创建异步 FreeRTOS 任务进行后台解码，防止阻塞主 UI 线程
         // H.264 解码比较吃栈空间，建议分配 8KB 以上，并绑定到 Core 1 运行
