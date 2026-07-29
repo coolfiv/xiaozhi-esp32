@@ -30,11 +30,10 @@
 #include "esp_h264_dec_sw.h"
 #include "esp_heap_caps.h" // 用于分配 PSRAM 内存
 #include "assets.h"
+#include "esp_imgfx_color_convert.h" // ppa
 
 // 如果使用 ESP32-P4 的硬件 PPA 转换 YUV 到 RGB，需要引入此头文件
-#if CONFIG_IDF_TARGET_ESP32P4
 #include "driver/ppa.h"
-#endif
 
 #define TAG "WirelessTagEsp32p4c5"
 
@@ -84,11 +83,11 @@ private:
         uint8_t* in_buf = (uint8_t*)heap_caps_malloc(in_buf_size, MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM);
 
         // 假设视频分辨率（实际可以从解码器获取，这里以 800x480 为例）
-        int width = 800;
-        int height = 480;
+        int video_width = 480;
+        int video_height = 480;
 
         // RGB565 屏幕缓冲区，每个像素 2 字节
-        size_t rgb_buf_size = width * height * 2;
+        size_t rgb_buf_size = video_width * video_height * 2;
         uint8_t* rgb_buf = (uint8_t*)heap_caps_malloc(rgb_buf_size, MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM);
 
         if (!in_buf || !rgb_buf) {
@@ -137,7 +136,14 @@ private:
             if (ret == ESP_OK && out_frame.out_size > 0 && out_frame.outbuf != nullptr) {
                 // 3. 将解码出的 YUV420p 数据转换为 RGB565/RGB888
                 // 注意：这里需要调用 YUV 转 RGB 的算法。如果是 P4 芯片，强烈推荐使用硬件 PPA：
-                // ppa_convert_yuv_to_rgb(out_data.buffer, rgb_buf, width, height);
+                // 注册 PPA 客户端（SRM 类型）
+                ppa_client_handle_t srm_client;
+                ppa_client_config_t client_cfg = {
+                    .oper_type = PPA_OPERATION_SRM,
+                    .max_pending_trans_num = 1,  // 阻塞模式设为1即可
+                    .data_burst_length = PPA_DATA_BURST_LENGTH_128,
+                };
+                ESP_ERROR_CHECK(ppa_register_client(&client_cfg, &srm_client));
 
                 // 4. 将 RGB 数据刷写到屏幕
                 // 这里调用你基类 MipiLcdDisplay 的绘制函数，例如：
@@ -195,6 +201,9 @@ public:
             ESP_LOGE("MipiVideo", "Failed to find asset: %s in assets.bin", video);
             return;
         }
+
+        m_video_data_ptr = static_cast<const uint8_t*>(temp_ptr);
+        m_video_data_size = temp_size;
 
         // 3. 创建异步 FreeRTOS 任务进行后台解码，防止阻塞主 UI 线程
         // H.264 解码比较吃栈空间，建议分配 8KB 以上，并绑定到 Core 1 运行
