@@ -464,7 +464,7 @@ public:
         boot_button_(BOOT_BUTTON_GPIO) {
         InitializeCodecI2c();
         InitializeLCD();
-        InitializeTouch();
+        // InitializeTouch();
         InitializeSdCard();
         InitializeButtons();
         GetBacklight()->RestoreBrightness();
