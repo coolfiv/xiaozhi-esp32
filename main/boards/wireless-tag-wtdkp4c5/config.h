@@ -8,11 +8,11 @@
 
 #define AUDIO_INPUT_REFERENCE           true
 
-#define AUDIO_I2S_GPIO_MCLK             GPIO_NUM_13
-#define AUDIO_I2S_GPIO_WS               GPIO_NUM_10
-#define AUDIO_I2S_GPIO_BCLK             GPIO_NUM_12
-#define AUDIO_I2S_GPIO_DIN              GPIO_NUM_11
-#define AUDIO_I2S_GPIO_DOUT             GPIO_NUM_9
+#define AUDIO_I2S_GPIO_MCLK             GPIO_NUM_39
+#define AUDIO_I2S_GPIO_WS               GPIO_NUM_42
+#define AUDIO_I2S_GPIO_BCLK             GPIO_NUM_40
+#define AUDIO_I2S_GPIO_DIN              GPIO_NUM_41
+#define AUDIO_I2S_GPIO_DOUT             GPIO_NUM_43
 
 #define AUDIO_CODEC_PA_PIN              GPIO_NUM_53
 #define AUDIO_CODEC_I2C_SDA_PIN         GPIO_NUM_7
