@@ -306,7 +306,7 @@ private:
             .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
             .bits_per_pixel = 16,
             .flags = {
-                .reset_active_high = true,
+                .reset_active_high = false,
             },
             .vendor_config = &vendor_config,
         };
