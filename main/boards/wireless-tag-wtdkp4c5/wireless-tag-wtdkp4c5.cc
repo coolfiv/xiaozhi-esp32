@@ -1,3 +1,4 @@
+#include "esp_h264_types.h"
 #include "wifi_board.h"
 #include "codecs/es8311_audio_codec.h"
 #include "application.h"
@@ -65,6 +66,8 @@ private:
         esp_h264_dec_cfg_t dec_cfg = {
             // 根据 esp_h264 库的实际版本配置参数
             // 通常可以设置为默认配置
+            // SW 解码器只输出 I420（YUV420 planar），必须设置 pic_type，否则创建失败
+            .pic_type = ESP_H264_RAW_FMT_I420,
         };
         esp_h264_dec_handle_t dec_handle = nullptr;
 
