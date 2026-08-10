@@ -62,7 +62,7 @@ private:
             return;
         }
 
-        // 1. 初始化 esp_h264 解码器
+        // 1. 初始化 esp_h264 解码器（ESP32-P4 上使用 tinyh264）
         esp_h264_dec_cfg_t dec_cfg = {
             // 根据 esp_h264 库的实际版本配置参数
             // 通常可以设置为默认配置
@@ -73,9 +73,7 @@ private:
 
         // 3. 【核心修复】根据芯片直接调用对应的创建函数
         esp_err_t ret = esp_h264_dec_sw_new(&dec_cfg, &dec_handle);
-
-
-        if (ret != ESP_OK) {
+        if (ret != ESP_H264_ERR_OK) {
             ESP_LOGE("MipiVideo", "Failed to create H264 decoder");
             return;
         }
