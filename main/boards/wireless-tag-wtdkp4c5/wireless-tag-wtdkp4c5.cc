@@ -36,6 +36,8 @@
 // 如果使用 ESP32-P4 的硬件 PPA 转换 YUV 到 RGB，需要引入此头文件
 #include "driver/ppa.h"
 
+#include "driver/ledc.h"
+
 #define TAG "WirelessTagEsp32p4c5"
 
 class MyMipiLcdDisplay : public MipiLcdDisplay {
@@ -282,8 +284,8 @@ private:
             .pixel_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
             .num_fbs = 1,
             .video_timing = {
-                .h_size = 1024,
-                .v_size = 600,
+                .h_size = 720,
+                .v_size = 720,
                 .hsync_pulse_width = 10,
                 .hsync_back_porch = 160,
                 .hsync_front_porch = 160,
@@ -460,6 +462,31 @@ private:
 #endif
     }
 
+    void init_gpio21_pwm_1_5v(void)
+    {
+        // 1. 配置 LEDC 定时器
+        ledc_timer_config_t ledc_timer = {
+            .speed_mode      = LEDC_LOW_SPEED_MODE,
+            .duty_resolution = LEDC_TIMER_10_BIT,
+            .timer_num       = LEDC_TIMER_0,
+            .freq_hz         = 5000,
+            .clk_cfg         = LEDC_AUTO_CLK
+        };
+        ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
+
+        // 2. 配置 LEDC 通道 (按结构体声明顺序排列)
+        ledc_channel_config_t ledc_channel = {
+            .gpio_num   = 21,
+            .speed_mode = LEDC_LOW_SPEED_MODE,
+            .channel    = LEDC_CHANNEL_0,
+            .intr_type  = LEDC_INTR_DISABLE,
+            .timer_sel  = LEDC_TIMER_0,
+            .duty       = 465, // 1023 * 1.5V / 3.3V ≈ 465
+            .hpoint     = 0
+        };
+        ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+    }
+
 public:
     WirelessTagEsp32p4c5() :
         boot_button_(BOOT_BUTTON_GPIO) {
@@ -469,6 +496,7 @@ public:
         InitializeSdCard();
         InitializeButtons();
         GetBacklight()->RestoreBrightness();
+        init_gpio21_pwm_1_5v()
     }
 
     virtual AudioCodec* GetAudioCodec() override {
