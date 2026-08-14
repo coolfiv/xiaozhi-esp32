@@ -393,7 +393,7 @@ void Application::CheckAssetsVersion() {
     assets.Apply();
     display->SetChatMessage("system", "");
     display->SetEmotion("microchip_ai");
-    display->SetVideo("microchip_ai");
+    display->SetVideo("cat.mp4");
 }
 
 void Application::CheckNewVersion() {
@@ -646,7 +646,7 @@ void Application::Alert(const char* status, const char* message, const char* emo
     auto display = Board::GetInstance().GetDisplay();
     display->SetStatus(status);
     display->SetEmotion(emotion);
-    display->SetVideo(emotion);
+    display->SetVideo("cat.mp4");
     display->SetChatMessage("system", message);
     if (!sound.empty()) {
         audio_service_.PlaySound(sound);
@@ -658,7 +658,7 @@ void Application::DismissAlert() {
         auto display = Board::GetInstance().GetDisplay();
         display->SetStatus(Lang::Strings::STANDBY);
         display->SetEmotion("neutral");
-        display->SetVideo("neutral");
+        display->SetVideo("cat.mp4");
         display->SetChatMessage("system", "");
     }
 }
@@ -876,20 +876,20 @@ void Application::HandleStateChangedEvent() {
             display->SetStatus(Lang::Strings::STANDBY);
             display->ClearChatMessages();  // Clear messages first
             display->SetEmotion("neutral"); // Then set emotion (wechat mode checks child count)
-            display->SetVideo("neutral");
+            display->SetVideo("cat.mp4");
             audio_service_.EnableVoiceProcessing(false);
             audio_service_.EnableWakeWordDetection(true);
             break;
         case kDeviceStateConnecting:
             display->SetStatus(Lang::Strings::CONNECTING);
             display->SetEmotion("neutral");
-            display->SetVideo("neutral");
+            display->SetVideo("cat.mp4");
             display->SetChatMessage("system", "");
             break;
         case kDeviceStateListening:
             display->SetStatus(Lang::Strings::LISTENING);
             display->SetEmotion("neutral");
-            display->SetVideo("neutral");
+            display->SetVideo("cat.mp4");
 
             // Make sure the audio processor is running
             if (play_popup_on_listening_ || !audio_service_.IsAudioProcessorRunning()) {
