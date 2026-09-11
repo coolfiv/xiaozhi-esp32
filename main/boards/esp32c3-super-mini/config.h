@@ -20,6 +20,10 @@
 #define BUILTIN_LED_GPIO        GPIO_NUM_2
 #define BOOT_BUTTON_GPIO        GPIO_NUM_9
 
+// 灯光控制（非屏幕背光）：PWM 调光 GPIO，按实际接线修改
+#define LIGHT_GPIO           GPIO_NUM_1
+#define LIGHT_OUTPUT_INVERT  false
+
 #define DISPLAY_WIDTH   128
 #define DISPLAY_HEIGHT  64
 #define DISPLAY_MIRROR_X true

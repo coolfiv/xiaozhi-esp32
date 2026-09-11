@@ -4,6 +4,7 @@
 #include "config.h"
 #include "display/oled_display.h"
 #include "led/single_led.h"
+#include "light_controller.h"
 #include "mcp_server.h"
 #include "power_save_timer.h"
 #include "press_to_talk_mcp_tool.h"
@@ -141,6 +142,7 @@ private:
     void InitializeTools() {
         press_to_talk_tool_ = new PressToTalkMcpTool();
         press_to_talk_tool_->Initialize();
+        static LightController light(LIGHT_GPIO, LIGHT_OUTPUT_INVERT);
     }
 
 public:
