@@ -19,6 +19,17 @@
 
 #define TAG "Esp32c3SuperMiniBoard"
 
+// 本板定制：不显示 Wi-Fi 图标，也不显示待机时钟
+class SuperMiniOledDisplay : public OledDisplay {
+public:
+    SuperMiniOledDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_handle_t panel,
+                         int width, int height, bool mirror_x, bool mirror_y)
+        : OledDisplay(panel_io, panel, width, height, mirror_x, mirror_y) {}
+
+    bool IsStatusBarNetworkIconEnabled() const override { return false; }
+    bool IsStatusBarClockEnabled() const override { return false; }
+};
+
 class Esp32c3SuperMiniBoard : public WifiBoard {
 private:
     i2c_master_bus_handle_t codec_i2c_bus_;
@@ -109,8 +120,8 @@ private:
         ESP_LOGI(TAG, "Turning display on");
         ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_, true));
 
-        display_ = new OledDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
-                                   DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
+        display_ = new SuperMiniOledDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT,
+                                            DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
     }
 
     void InitializeButtons() {

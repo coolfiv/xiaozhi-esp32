@@ -1,29 +1,30 @@
-#include <esp_log.h>
 #include <esp_err.h>
-#include <string>
+#include <esp_log.h>
+#include <font_awesome.h>
 #include <cstdlib>
 #include <cstring>
-#include <font_awesome.h>
+#include <string>
 
-#include "lvgl_display.h"
-#include "board.h"
 #include "application.h"
-#include "audio_codec.h"
-#include "settings.h"
 #include "assets/lang_config.h"
+#include "audio_codec.h"
+#include "board.h"
 #include "jpg/image_to_jpeg.h"
+#include "lvgl_display.h"
+#include "settings.h"
 
 #define TAG "Display"
 
 LvglDisplay::LvglDisplay() {
     // Notification timer
     esp_timer_create_args_t notification_timer_args = {
-        .callback = [](void *arg) {
-            LvglDisplay *display = static_cast<LvglDisplay*>(arg);
-            DisplayLockGuard lock(display);
-            lv_obj_add_flag(display->notification_label_, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_remove_flag(display->status_label_, LV_OBJ_FLAG_HIDDEN);
-        },
+        .callback =
+            [](void* arg) {
+                LvglDisplay* display = static_cast<LvglDisplay*>(arg);
+                DisplayLockGuard lock(display);
+                lv_obj_add_flag(display->notification_label_, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_remove_flag(display->status_label_, LV_OBJ_FLAG_HIDDEN);
+            },
         .arg = this,
         .dispatch_method = ESP_TIMER_TASK,
         .name = "notification_timer",
@@ -61,7 +62,7 @@ LvglDisplay::~LvglDisplay() {
     if (battery_label_ != nullptr) {
         lv_obj_del(battery_label_);
     }
-    if( low_battery_popup_ != nullptr ) {
+    if (low_battery_popup_ != nullptr) {
         lv_obj_del(low_battery_popup_);
     }
     if (pm_lock_ != nullptr) {
@@ -76,7 +77,10 @@ void LvglDisplay::SetStatus(const char* status) {
     DisplayLockGuard lock(this);
     if (status_label_ == nullptr) {
         if (setup_ui_called_) {
-            ESP_LOGW(TAG, "SetStatus('%s') failed: status_label_ is nullptr (SetupUI() was called but label not created)", status);
+            ESP_LOGW(TAG,
+                     "SetStatus('%s') failed: status_label_ is nullptr (SetupUI() was called but "
+                     "label not created)",
+                     status);
         }
         return;
     }
@@ -87,18 +91,22 @@ void LvglDisplay::SetStatus(const char* status) {
     last_status_update_time_ = std::chrono::system_clock::now();
 }
 
-void LvglDisplay::ShowNotification(const std::string &notification, int duration_ms) {
+void LvglDisplay::ShowNotification(const std::string& notification, int duration_ms) {
     ShowNotification(notification.c_str(), duration_ms);
 }
 
 void LvglDisplay::ShowNotification(const char* notification, int duration_ms) {
     if (!setup_ui_called_) {
-        ESP_LOGW(TAG, "ShowNotification('%s') called before SetupUI() - message will be lost!", notification);
+        ESP_LOGW(TAG, "ShowNotification('%s') called before SetupUI() - message will be lost!",
+                 notification);
     }
     DisplayLockGuard lock(this);
     if (notification_label_ == nullptr) {
         if (setup_ui_called_) {
-            ESP_LOGW(TAG, "ShowNotification('%s') failed: notification_label_ is nullptr (SetupUI() was called but label not created)", notification);
+            ESP_LOGW(TAG,
+                     "ShowNotification('%s') failed: notification_label_ is nullptr (SetupUI() was "
+                     "called but label not created)",
+                     notification);
         }
         return;
     }
@@ -133,8 +141,9 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
     }
 
     // Update time
-    if (app.GetDeviceState() == kDeviceStateIdle) {
-        if (last_status_update_time_ + std::chrono::seconds(10) < std::chrono::system_clock::now()) {
+    if (IsStatusBarClockEnabled() && app.GetDeviceState() == kDeviceStateIdle) {
+        if (last_status_update_time_ + std::chrono::seconds(10) <
+            std::chrono::system_clock::now()) {
             // Set status to clock "HH:MM"
             time_t now = time(NULL);
             struct tm* tm = localtime(&now);
@@ -159,12 +168,12 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
             icon = FONT_AWESOME_BATTERY_BOLT;
         } else {
             const char* levels[] = {
-                FONT_AWESOME_BATTERY_EMPTY, // 0-19%
-                FONT_AWESOME_BATTERY_QUARTER,    // 20-39%
-                FONT_AWESOME_BATTERY_HALF,    // 40-59%
-                FONT_AWESOME_BATTERY_THREE_QUARTERS,    // 60-79%
-                FONT_AWESOME_BATTERY_FULL, // 80-99%
-                FONT_AWESOME_BATTERY_FULL, // 100%
+                FONT_AWESOME_BATTERY_EMPTY,           // 0-19%
+                FONT_AWESOME_BATTERY_QUARTER,         // 20-39%
+                FONT_AWESOME_BATTERY_HALF,            // 40-59%
+                FONT_AWESOME_BATTERY_THREE_QUARTERS,  // 60-79%
+                FONT_AWESOME_BATTERY_FULL,            // 80-99%
+                FONT_AWESOME_BATTERY_FULL,            // 100%
             };
             icon = levels[battery_level / 20];
         }
@@ -178,15 +187,15 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
         // Because when initializing, the battery level is not ready yet.
         if (low_battery_popup_ != nullptr && !update_all) {
             if (strcmp(icon, FONT_AWESOME_BATTERY_EMPTY) == 0 && discharging) {
-                if (lv_obj_has_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN)) { // Show if low battery popup is hidden
+                if (lv_obj_has_flag(low_battery_popup_,
+                                    LV_OBJ_FLAG_HIDDEN)) {  // Show if low battery popup is hidden
                     lv_obj_remove_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
-                    app.Schedule([&app]() {
-                        app.PlaySound(Lang::Sounds::OGG_LOW_BATTERY);
-                    });
+                    app.Schedule([&app]() { app.PlaySound(Lang::Sounds::OGG_LOW_BATTERY); });
                 }
             } else {
                 // Hide the low battery popup when the battery is not empty
-                if (!lv_obj_has_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN)) { // Hide if low battery popup is shown
+                if (!lv_obj_has_flag(low_battery_popup_,
+                                     LV_OBJ_FLAG_HIDDEN)) {  // Hide if low battery popup is shown
                     lv_obj_add_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
                 }
             }
@@ -199,13 +208,12 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
         // Don't read 4G network status during firmware upgrade to avoid occupying UART resources
         auto device_state = Application::GetInstance().GetDeviceState();
         static const std::vector<DeviceState> allowed_states = {
-            kDeviceStateIdle,
-            kDeviceStateStarting,
-            kDeviceStateWifiConfiguring,
-            kDeviceStateListening,
-            kDeviceStateActivating,
+            kDeviceStateIdle,      kDeviceStateStarting,   kDeviceStateWifiConfiguring,
+            kDeviceStateListening, kDeviceStateActivating,
         };
-        if (std::find(allowed_states.begin(), allowed_states.end(), device_state) != allowed_states.end()) {
+        if (IsStatusBarNetworkIconEnabled() &&
+            std::find(allowed_states.begin(), allowed_states.end(), device_state) !=
+                allowed_states.end()) {
             icon = board.GetNetworkStateIcon();
             if (network_label_ != nullptr && icon != nullptr && network_icon_ != icon) {
                 DisplayLockGuard lock(this);
@@ -218,8 +226,7 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
     esp_pm_lock_release(pm_lock_);
 }
 
-void LvglDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
-}
+void LvglDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {}
 
 void LvglDisplay::SetPowerSaveMode(bool on) {
     if (on) {
@@ -253,14 +260,17 @@ bool LvglDisplay::SnapshotToJpeg(std::string& jpeg_data, int quality) {
     jpeg_data.clear();
 
     // Use callback-based JPEG encoder to further save memory
-    bool ret = image_to_jpeg_cb((uint8_t*)draw_buffer->data, draw_buffer->data_size, draw_buffer->header.w, draw_buffer->header.h, V4L2_PIX_FMT_RGB565, quality,
-        [](void *arg, size_t index, const void *data, size_t len) -> size_t {
-        std::string* output = static_cast<std::string*>(arg);
-        if (data && len > 0) {
-            output->append(static_cast<const char*>(data), len);
-        }
-        return len;
-    }, &jpeg_data);
+    bool ret =
+        image_to_jpeg_cb((uint8_t*)draw_buffer->data, draw_buffer->data_size, draw_buffer->header.w,
+                         draw_buffer->header.h, V4L2_PIX_FMT_RGB565, quality,
+                         [](void* arg, size_t index, const void* data, size_t len) -> size_t {
+                             std::string* output = static_cast<std::string*>(arg);
+                             if (data && len > 0) {
+                                 output->append(static_cast<const char*>(data), len);
+                             }
+                             return len;
+                         },
+                         &jpeg_data);
     if (!ret) {
         ESP_LOGE(TAG, "Failed to convert image to JPEG");
     }
