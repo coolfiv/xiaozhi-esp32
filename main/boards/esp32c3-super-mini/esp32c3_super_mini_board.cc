@@ -51,8 +51,8 @@ public:
                                   LV_FLEX_ALIGN_CENTER);
         }
 
-        left_eye_ = CreateEye(-17);
-        right_eye_ = CreateEye(17);
+        left_eye_ = CreateEye(-kEyeOffsetX);
+        right_eye_ = CreateEye(kEyeOffsetX);
         StartBlink(left_eye_);
         StartBlink(right_eye_);
         StartLookAround(left_eye_);
