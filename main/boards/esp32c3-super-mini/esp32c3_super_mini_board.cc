@@ -28,6 +28,8 @@ public:
 
     void SetupUI() override {
         OledDisplay::SetupUI();
+        ESP_LOGI(TAG, "SuperMiniOledDisplay::SetupUI height=%d top_bar=%p status_bar=%p",
+                         height_, top_bar_, status_bar_);
         if (height_ != 64) {
             return;
         }
