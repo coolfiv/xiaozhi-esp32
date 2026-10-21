@@ -19,7 +19,7 @@
 
 #define TAG "Esp32c3SuperMiniBoard"
 
-// 本板定制：隐藏整个顶部栏（Wi-Fi/静音/电量图标 + 时间/状态/通知文字）
+// 本板定制：隐藏顶部栏 + 会动的眼睛
 class SuperMiniOledDisplay : public OledDisplay {
 public:
     SuperMiniOledDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_handle_t panel,
@@ -34,22 +34,88 @@ public:
 
         DisplayLockGuard lock(this);
 
-        // 1. 隐藏顶部图标栏（Wi-Fi / 静音 / 电量）
+        // 1. 隐藏整个顶部栏（Wi-Fi/静音/电量 + 时间/状态/通知）
         if (top_bar_ != nullptr) {
             lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
         }
-        // 2. 隐藏状态栏（时间 / 待命 / 通知文字）
         if (status_bar_ != nullptr) {
             lv_obj_add_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
         }
-        // 3. top_bar_ 隐藏后 content_ 由 48px 变成 64px，重新垂直居中表情
+
+        // 2. 隐藏 FontAwesome 静态表情，换成两只眼睛
+        if (emotion_label_ != nullptr) {
+            lv_obj_add_flag(emotion_label_, LV_OBJ_FLAG_HIDDEN);
+        }
         if (content_ != nullptr) {
             lv_obj_set_flex_align(content_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                                   LV_FLEX_ALIGN_CENTER);
         }
-        if (emotion_label_ != nullptr) {
-            lv_obj_set_style_pad_top(emotion_label_, 0, 0);
-        }
+
+        left_eye_ = CreateEye(-17);
+        right_eye_ = CreateEye(17);
+        StartBlink(left_eye_);
+        StartBlink(right_eye_);
+        StartLookAround(left_eye_);
+        StartLookAround(right_eye_);
+    }
+
+private:
+    static constexpr int kEyeWidth = 14;   // 眼睛宽度
+    static constexpr int kEyeHeight = 22;  // 眼睛高度
+    static constexpr int kEyeOffsetX = 17; // 两只眼睛中心到屏幕中心的距离
+
+    lv_obj_t* left_eye_ = nullptr;
+    lv_obj_t* right_eye_ = nullptr;
+
+    lv_obj_t* CreateEye(int x_offset) {
+        lv_obj_t* eye = lv_obj_create(content_);
+        lv_obj_remove_style_all(eye);
+        lv_obj_remove_flag(eye, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_size(eye, kEyeWidth, kEyeHeight);
+        lv_obj_set_style_radius(eye, LV_RADIUS_CIRCLE, 0);
+        // 和文字同色；若眼睛看不见，改成 lv_color_white()
+        lv_obj_set_style_bg_color(eye, lv_color_black(), 0);
+        lv_obj_set_style_bg_opa(eye, LV_OPA_COVER, 0);
+        lv_obj_add_flag(eye, LV_OBJ_FLAG_IGNORE_LAYOUT);  // 不受 content_ 的 flex 布局影响
+        lv_obj_align(eye, LV_ALIGN_CENTER, x_offset, 0);
+        return eye;
+    }
+
+    static void EyeHeightCb(void* var, int32_t value) {
+        lv_obj_set_height(static_cast<lv_obj_t*>(var), value);
+    }
+
+    static void EyeTranslateXCb(void* var, int32_t value) {
+        lv_obj_set_style_translate_x(static_cast<lv_obj_t*>(var), value, 0);
+    }
+
+    // 眨眼：睁 -> 闭 -> 睁，每 3 秒一次
+    void StartBlink(lv_obj_t* eye) {
+        lv_anim_t a;
+        lv_anim_init(&a);
+        lv_anim_set_var(&a, eye);
+        lv_anim_set_values(&a, kEyeHeight, 2);
+        lv_anim_set_duration(&a, 90);
+        lv_anim_set_reverse_duration(&a, 90);
+        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_repeat_delay(&a, 3000);
+        lv_anim_set_exec_cb(&a, EyeHeightCb);
+        lv_anim_start(&a);
+    }
+
+    // 眼珠左右看：-4 ~ +4 px
+    void StartLookAround(lv_obj_t* eye) {
+        lv_anim_t a;
+        lv_anim_init(&a);
+        lv_anim_set_var(&a, eye);
+        lv_anim_set_values(&a, -4, 4);
+        lv_anim_set_duration(&a, 1200);
+        lv_anim_set_reverse_duration(&a, 1200);
+        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_repeat_delay(&a, 2000);
+        lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
+        lv_anim_set_exec_cb(&a, EyeTranslateXCb);
+        lv_anim_start(&a);
     }
 };
 
