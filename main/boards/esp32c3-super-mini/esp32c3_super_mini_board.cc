@@ -19,15 +19,38 @@
 
 #define TAG "Esp32c3SuperMiniBoard"
 
-// 本板定制：不显示 Wi-Fi 图标，也不显示待机时钟
+// 本板定制：隐藏整个顶部栏（Wi-Fi/静音/电量图标 + 时间/状态/通知文字）
 class SuperMiniOledDisplay : public OledDisplay {
 public:
     SuperMiniOledDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_handle_t panel,
                          int width, int height, bool mirror_x, bool mirror_y)
         : OledDisplay(panel_io, panel, width, height, mirror_x, mirror_y) {}
 
-    bool IsStatusBarNetworkIconEnabled() const override { return false; }
-    bool IsStatusBarClockEnabled() const override { return false; }
+    void SetupUI() override {
+        OledDisplay::SetupUI();
+        if (height_ != 64) {
+            return;
+        }
+
+        DisplayLockGuard lock(this);
+
+        // 1. 隐藏顶部图标栏（Wi-Fi / 静音 / 电量）
+        if (top_bar_ != nullptr) {
+            lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+        }
+        // 2. 隐藏状态栏（时间 / 待命 / 通知文字）
+        if (status_bar_ != nullptr) {
+            lv_obj_add_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+        }
+        // 3. top_bar_ 隐藏后 content_ 由 48px 变成 64px，重新垂直居中表情
+        if (content_ != nullptr) {
+            lv_obj_set_flex_align(content_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                                  LV_FLEX_ALIGN_CENTER);
+        }
+        if (emotion_label_ != nullptr) {
+            lv_obj_set_style_pad_top(emotion_label_, 0, 0);
+        }
+    }
 };
 
 class Esp32c3SuperMiniBoard : public WifiBoard {

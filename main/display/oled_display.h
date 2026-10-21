@@ -8,7 +8,7 @@
 
 
 class OledDisplay : public LvglDisplay {
-private:
+protected:
     esp_lcd_panel_io_handle_t panel_io_ = nullptr;
     esp_lcd_panel_handle_t panel_ = nullptr;
 
