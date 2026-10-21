@@ -22,10 +22,6 @@ public:
     virtual void ShowNotification(const std::string &notification, int duration_ms = 3000);
     virtual void SetPreviewImage(std::unique_ptr<LvglImage> image);
     virtual void UpdateStatusBar(bool update_all = false);
-    // 子类可覆盖：是否在状态栏显示网络（Wi-Fi/4G）图标
-    virtual bool IsStatusBarNetworkIconEnabled() const { return true; }
-    // 子类可覆盖：idle 待机时是否用时钟替换状态文字
-    virtual bool IsStatusBarClockEnabled() const { return true; }
     virtual void SetPowerSaveMode(bool on);
     virtual bool SnapshotToJpeg(std::string& jpeg_data, int quality = 80);
 

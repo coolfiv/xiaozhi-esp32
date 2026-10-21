@@ -141,7 +141,7 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
     }
 
     // Update time
-    if (IsStatusBarClockEnabled() && app.GetDeviceState() == kDeviceStateIdle) {
+    if (app.GetDeviceState() == kDeviceStateIdle) {
         if (last_status_update_time_ + std::chrono::seconds(10) <
             std::chrono::system_clock::now()) {
             // Set status to clock "HH:MM"
@@ -211,8 +211,7 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
             kDeviceStateIdle,      kDeviceStateStarting,   kDeviceStateWifiConfiguring,
             kDeviceStateListening, kDeviceStateActivating,
         };
-        if (IsStatusBarNetworkIconEnabled() &&
-            std::find(allowed_states.begin(), allowed_states.end(), device_state) !=
+        if (std::find(allowed_states.begin(), allowed_states.end(), device_state) !=
                 allowed_states.end()) {
             icon = board.GetNetworkStateIcon();
             if (network_label_ != nullptr && icon != nullptr && network_icon_ != icon) {
