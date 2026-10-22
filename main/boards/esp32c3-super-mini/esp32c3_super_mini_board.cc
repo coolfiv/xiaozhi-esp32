@@ -60,9 +60,9 @@ public:
     }
 
 private:
-    static constexpr int kEyeWidth = 14;   // 眼睛宽度
-    static constexpr int kEyeHeight = 22;  // 眼睛高度
-    static constexpr int kEyeOffsetX = 17; // 两只眼睛中心到屏幕中心的距离
+    static constexpr int kEyeWidth = 24;   // 眼睛宽度
+    static constexpr int kEyeHeight = 34;  // 眼睛高度
+    static constexpr int kEyeOffsetX = 28; // 两只眼睛中心到屏幕中心的距离
 
     lv_obj_t* left_eye_ = nullptr;
     lv_obj_t* right_eye_ = nullptr;
