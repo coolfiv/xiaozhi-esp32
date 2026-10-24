@@ -3,8 +3,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#include "soc/soc_caps.h"
-
 #if SOC_MIPI_DSI_SUPPORTED
 #include "esp_check.h"
 #include "esp_log.h"
