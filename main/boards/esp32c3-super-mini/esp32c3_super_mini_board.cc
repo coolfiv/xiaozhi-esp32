@@ -52,7 +52,7 @@ public:
             return;
         }
 
-        DisplayLockGuard lock(this);
+        DisplayLockGuard lock{this};
 
         // 隐藏顶部图标栏/状态栏/原来的 FontAwesome 表情
         if (top_bar_ != nullptr) {
