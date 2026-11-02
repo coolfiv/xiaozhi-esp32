@@ -5,10 +5,10 @@
 #include "display/oled_display.h"
 #include "led/single_led.h"
 #include "light_controller.h"
-#include "mcp_server.h"
+// #include "mcp_server.h"
 #include "power_save_timer.h"
 #include "press_to_talk_mcp_tool.h"
-#include "settings.h"
+// #include "settings.h"
 #include "wifi_board.h"
 
 #include <cstring>
@@ -114,10 +114,18 @@ private:
         if (emotion == nullptr) {
             return EyeMood::Neutral;
         }
-        if (!strcmp(emotion, "happy") || !strcmp(emotion, "laughing") || !strcmp(emotion, "funny") ||
-            !strcmp(emotion, "loving") || !strcmp(emotion, "delicious") ||
-            !strcmp(emotion, "confident") || !strcmp(emotion, "embarrassed")) {
+
+        // 开心类
+        if (!strcmp(emotion, "happy") || !strcmp(emotion, "laughing") ||
+            !strcmp(emotion, "funny") || !strcmp(emotion, "loving") ||
+            !strcmp(emotion, "delicious") || !strcmp(emotion, "kissy") ||
+            !strcmp(emotion, "confident") || !strcmp(emotion, "cool") ||
+            !strcmp(emotion, "embarrassed")) {
             return EyeMood::Happy;
+        }
+        // 眨眼 / 调皮
+        if (!strcmp(emotion, "winking") || !strcmp(emotion, "silly")) {
+            return EyeMood::Winking;
         }
         if (!strcmp(emotion, "angry")) {
             return EyeMood::Angry;
@@ -139,9 +147,6 @@ private:
         if (!strcmp(emotion, "surprised") || !strcmp(emotion, "shocked") ||
             !strcmp(emotion, "panic")) {
             return EyeMood::Surprised;
-        }
-        if (!strcmp(emotion, "winking")) {
-            return EyeMood::Winking;
         }
         return EyeMood::Neutral;  // 未知情绪一律回到普通眼睛
     }
